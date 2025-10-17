@@ -7,11 +7,12 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import cm
+from datetime import datetime
 
 # --- CONFIG ---
 st.set_page_config(page_title="Smart Lineup Rotator", page_icon="⚽", layout="wide")
-st.title("⚽ Smart Football Lineup Generator - Diamante Formation PDF")
-st.markdown("Generate rotations and download a PDF with all intervals on the same page (two per row).")
+st.title("⚽ Smart Football Lineup Generator - Professional PDF")
+st.markdown("Generate a professional PDF with all rotations, headers, and visual field.")
 
 # --- SIDEBAR SETTINGS ---
 st.sidebar.header("⚙️ Match Settings")
@@ -53,7 +54,7 @@ if st.button("🎲 Generate Rotations"):
             available = previous_starters.copy()
             assigned = []
 
-            # Assign positions giving priority to players with fewer minutes
+            # Assign positions prioritizing equal play time
             for pos in field_positions:
                 if "Midfielder" in pos:
                     candidates = [p for p in available if "Midfielder" in players[p]]
@@ -80,7 +81,7 @@ if st.button("🎲 Generate Rotations"):
 
         st.success("✅ Rotations generated successfully!")
 
-        # --- DISPLAY LINEUPS AND FIELD IN STREAMLIT ---
+        # --- DISPLAY LINEUPS IN STREAMLIT ---
         for i, lineup in enumerate(lineups, 1):
             st.subheader(f"🕐 Half-quarter {i}")
             resting_players = [p for p in all_players if p not in lineup.values()]
@@ -89,7 +90,6 @@ if st.button("🎲 Generate Rotations"):
             fig, ax = plt.subplots(figsize=(8, 5))
             field = patches.Rectangle((0, 0), 10, 6, linewidth=2, edgecolor='green', facecolor='lightgreen')
             ax.add_patch(field)
-
             center_circle = patches.Circle((5, 3), 1, linewidth=2, edgecolor='white', facecolor='none')
             ax.add_patch(center_circle)
             ax.plot([5, 5], [0, 6], color='white', linewidth=2)
@@ -122,20 +122,24 @@ if st.button("🎲 Generate Rotations"):
         summary_table = {player: minutes_played[player] for player in all_players}
         st.table(summary_table)
 
-        # --- PDF GENERATION (all intervals in the same page, two per row) ---
+        # --- PDF GENERATION ---
         pdf_buffer = BytesIO()
         c = canvas.Canvas(pdf_buffer, pagesize=landscape(letter))
         c.setFont("Helvetica", 10)
 
         def draw_field_pdf(c, x_offset, y_offset, lineup, resting_players):
+            # Field
             c.setFillColorRGB(0.7, 1, 0.7)
             c.rect(x_offset, y_offset, 300, 180, fill=1)
+            # Midline and center circle
             c.setStrokeColorRGB(1, 1, 1)
             c.setLineWidth(2)
             c.line(x_offset + 150, y_offset, x_offset + 150, y_offset + 180)
             c.circle(x_offset + 150, y_offset + 90, 30)
+            # Penalty areas
             c.rect(x_offset, y_offset + 60, 45, 60, stroke=1, fill=0)
             c.rect(x_offset + 255, y_offset + 60, 45, 60, stroke=1, fill=0)
+            # Players
             coords = {
                 "Goalkeeper": (x_offset + 15, y_offset + 90),
                 "Defender": (x_offset + 90, y_offset + 90),
@@ -150,29 +154,37 @@ if st.button("🎲 Generate Rotations"):
                 c.setFillColorRGB(0, 0, 0)
                 c.drawCentredString(x, y, player_name)
 
-        # Draw all intervals in pairs on same page (max 2 rows)
-        y_start = 350
-        for i in range(0, len(lineups), 2):
-            c.setFont("Helvetica-Bold", 12)
-            c.drawString(20, y_start + 180, f"Intervals {i+1} & {i+2}")
-            # Left field
-            lineup1 = lineups[i]
-            resting1 = [p for p in all_players if p not in lineup1.values()]
-            draw_field_pdf(c, 50, y_start, lineup1, resting1)
-            # Right field
-            if i+1 < len(lineups):
-                lineup2 = lineups[i+1]
-                resting2 = [p for p in all_players if p not in lineup2.values()]
-                draw_field_pdf(c, 400, y_start, lineup2, resting2)
-            y_start -= 200  # move to next row if needed
-        c.showPage()
+        # PDF layout
+        intervals_per_page = 4  # 2 rows x 2 fields
+        for page_start in range(0, len(lineups), intervals_per_page):
+            # Header
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(20, 560, f"Smart Lineup Rotations - {datetime.now().strftime('%Y-%m-%d')}")
+            c.setFont("Helvetica", 10)
+            c.drawString(20, 545, f"Players: {', '.join(all_players)}")
+
+            y_positions = [350, 100]  # top row, bottom row
+            for idx, i in enumerate(range(page_start, min(page_start + intervals_per_page, len(lineups)), 2)):
+                y_offset = y_positions[idx % 2]
+                # Left field
+                lineup1 = lineups[i]
+                resting1 = [p for p in all_players if p not in lineup1.values()]
+                draw_field_pdf(c, 50, y_offset, lineup1, resting1)
+                # Right field
+                if i+1 < len(lineups):
+                    lineup2 = lineups[i+1]
+                    resting2 = [p for p in all_players if p not in lineup2.values()]
+                    draw_field_pdf(c, 400, y_offset, lineup2, resting2)
+
+            c.showPage()  # New page for next set
+
         c.save()
         pdf_buffer.seek(0)
 
-        st.markdown("### 📄 Download PDF with All Rotations (two per row)")
+        st.markdown("### 📄 Download Professional PDF")
         st.download_button(
-            label="Download PDF",
+            label="Download Professional Rotations PDF",
             data=pdf_buffer,
-            file_name="rotations_all_intervals.pdf",
+            file_name="rotations_professional.pdf",
             mime="application/pdf"
         )
