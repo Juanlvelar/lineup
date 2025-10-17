@@ -37,7 +37,7 @@ if st.button("🎲 Generate Rotations"):
     if len(players) < 6:
         st.error("You must enter at least 6 players.")
     else:
-        field_positions = ["Goalkeeper", "Defender", "Midfielder", "Midfielder", "Forward"]
+        field_positions = ["Goalkeeper", "Defender", "Midfielder1", "Midfielder2", "Forward"]
         minutes_played = defaultdict(int)
         all_players = list(players.keys())
         starters = random.sample(all_players, 5)
@@ -51,7 +51,8 @@ if st.button("🎲 Generate Rotations"):
 
             # Assign positions fairly
             for pos in field_positions:
-                candidates = [p for p in available if pos in players[p]]
+                candidates = [p for p in available if pos.startswith("Midfielder") and "Midfielder" in players[p]] \
+                             if "Midfielder" in pos else [p for p in available if pos in players[p]]
                 if not candidates:
                     player = random.choice(available)
                 else:
@@ -83,26 +84,24 @@ if st.button("🎲 Generate Rotations"):
 
             # Draw field
             fig, ax = plt.subplots(figsize=(8, 5))
-            # Field rectangle
             field = patches.Rectangle((0, 0), 10, 6, linewidth=2, edgecolor='green', facecolor='lightgreen')
             ax.add_patch(field)
 
-            # Draw central circle
+            # Center circle
             center_circle = patches.Circle((5, 3), 1, linewidth=2, edgecolor='white', facecolor='none')
             ax.add_patch(center_circle)
 
-            # Draw penalty areas (simplified 5-a-side style)
+            # Penalty areas
             penalty_left = patches.Rectangle((0, 2), 1.5, 2, linewidth=2, edgecolor='white', facecolor='none')
             penalty_right = patches.Rectangle((8.5, 2), 1.5, 2, linewidth=2, edgecolor='white', facecolor='none')
             ax.add_patch(penalty_left)
             ax.add_patch(penalty_right)
 
-            # Set limits and hide axes
             ax.set_xlim(0, 10)
             ax.set_ylim(0, 6)
             ax.axis('off')
 
-            # --- DIAMOND FORMATION COORDINATES ---
+            # Diamond formation coordinates
             diamond_coords = {
                 "Goalkeeper": (0.5, 3),
                 "Defender": (3, 3),
@@ -111,15 +110,14 @@ if st.button("🎲 Generate Rotations"):
                 "Forward": (8.5, 3)
             }
 
-            # Assign players to coordinates
-            for j, pos in enumerate(field_positions):
-                if pos == "Midfielder":
-                    key = f"Midfielder{j-1}" if j-1 < 2 else "Midfielder2"
-                else:
-                    key = pos
-                player_name = lineup[pos]
-                x, y = diamond_coords.get(key, (0, 0))
+            for pos, player_name in lineup.items():
+                x, y = diamond_coords.get(pos, (0, 0))
                 ax.text(x, y, player_name, ha='center', va='center',
                         fontsize=10, bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
 
             st.pyplot(fig)
+
+        # --- SUMMARY OF MINUTES ---
+        st.markdown("### ⏱️ Summary of minutes played")
+        summary_table = {player: minutes_played[player] for player in all_players}
+        st.table(summary_table)
