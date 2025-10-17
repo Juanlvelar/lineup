@@ -3,9 +3,6 @@ import random
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import io
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
 
 # --- INITIAL CONFIG ---
 st.set_page_config(page_title="Smart Lineup Rotator", page_icon="⚽", layout="wide")
@@ -21,7 +18,6 @@ num_players = st.sidebar.slider("Number of players", 6, 7, 7)
 
 # --- PLAYER INPUT ---
 st.markdown("### 👥 Player list and preferred positions")
-
 positions = ["Goalkeeper", "Defender", "Midfielder", "Forward"]
 players = {}
 
@@ -90,5 +86,35 @@ if st.button("🎲 Generate Rotations"):
         for i, lineup in enumerate(lineups, 1):
             st.subheader(f"🕐 Half-quarter {i}")
 
-            col1, col2 = st.columns([1, 2])
-            
+            # Show table
+            st.table(lineup.items())
+
+            # Draw field with matplotlib
+            fig, ax = plt.subplots(figsize=(6, 4))
+            # Draw field rectangle
+            field = patches.Rectangle((0, 0), 10, 6, linewidth=2, edgecolor='green', facecolor='lightgreen')
+            ax.add_patch(field)
+            ax.set_xlim(0, 10)
+            ax.set_ylim(0, 6)
+            ax.axis('off')
+
+            # Position coordinates (x, y)
+            pos_coords = {
+                "Goalkeeper": (1, 3),
+                "Defender": (3, 1.5),
+                "Midfielder1": (5, 2),
+                "Midfielder2": (5, 4),
+                "Forward": (8, 3)
+            }
+
+            # Place players on field
+            for j, pos in enumerate(field_positions):
+                if pos == "Midfielder":
+                    key = f"Midfielder{j-1}" if j-1 < 2 else "Midfielder2"
+                else:
+                    key = pos
+                player_name = lineup[pos]
+                x, y = pos_coords.get(key, (0, 0))
+                ax.text(x, y, player_name, ha='center', va='center', fontsize=10, bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
+
+            st.pyplot(fig)
