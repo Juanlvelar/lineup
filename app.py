@@ -57,8 +57,8 @@ if st.button("🎲 Generate Rotations"):
 
         field_positions = list(formation_x.keys())
         all_players = list(players.keys())
-
         max_gk_per_player = 1
+
         best_lineups = None
         best_diff = float("inf")
 
@@ -68,25 +68,22 @@ if st.button("🎲 Generate Rotations"):
             gk_count = defaultdict(int)
             lineups = []
             previous_starters = random.sample(all_players, 5)
+            used_players = set(previous_starters)
 
             for _ in range(intervals):
                 lineup = {}
                 available = previous_starters.copy()
                 assigned = []
 
-                # --- ASIGNACIÓN DE POSICIONES ---
                 for pos in field_positions:
                     candidates = [p for p in available if pos in players[p]] or available.copy()
-
                     if pos == "Goalkeeper":
                         candidates = [p for p in candidates if gk_count[p] < max_gk_per_player] or candidates
-
                     player = min(candidates, key=lambda x: minutes_played[x])
                     lineup[pos] = player
                     assigned.append(player)
                     available.remove(player)
 
-                # --- ACTUALIZAR MINUTOS ---
                 for pos, player in lineup.items():
                     if pos == "Goalkeeper":
                         gk_count[player] += 1
@@ -94,6 +91,7 @@ if st.button("🎲 Generate Rotations"):
                             minutes_played[player] += 1
                     else:
                         minutes_played[player] += 1
+                    used_players.add(player)
 
                 lineups.append(lineup)
 
@@ -104,6 +102,12 @@ if st.button("🎲 Generate Rotations"):
                 else:
                     previous_starters = assigned
 
+            # Asegura que todos juegan al menos una vez
+            if len(used_players) < len(all_players):
+                for p in all_players:
+                    if p not in used_players:
+                        minutes_played[p] = 0
+
             max_m = max(minutes_played.values())
             min_m = min(minutes_played.values())
             diff = max_m - min_m
@@ -112,7 +116,7 @@ if st.button("🎲 Generate Rotations"):
                 best_diff = diff
                 best_lineups = lineups
 
-            if diff <= 1:
+            if diff <= 1 and len(used_players) == len(all_players):
                 break
 
         lineups = best_lineups
