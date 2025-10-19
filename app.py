@@ -32,10 +32,20 @@ default_positions = {
     "Forward": (8.5, 3),
 }
 
-# Sliders con claves únicas
+# Sliders seguros con validación de rango
 for pos, (dx, dy) in default_positions.items():
-    formation_x[pos] = st.sidebar.slider(f"{pos} X", 0.0, 10.0, dx, 0.1, key=f"{pos}_x_slider")
-    formation_y[pos] = st.sidebar.slider(f"{pos} Y", 0.0, 6.0, dy, 0.1, key=f"{pos}_y_slider")
+    try:
+        dx = float(dx) if 0.0 <= dx <= 10.0 else 5.0
+        dy = float(dy) if 0.0 <= dy <= 6.0 else 3.0
+    except Exception:
+        dx, dy = 5.0, 3.0
+
+    formation_x[pos] = st.sidebar.slider(
+        f"{pos} X", 0.0, 10.0, float(dx), 0.1, key=f"{pos}_x_slider"
+    )
+    formation_y[pos] = st.sidebar.slider(
+        f"{pos} Y", 0.0, 6.0, float(dy), 0.1, key=f"{pos}_y_slider"
+    )
 
 # --- LISTA DE JUGADORES ---
 st.markdown("### 👥 Player list and preferred positions")
@@ -55,7 +65,7 @@ if st.button("🎲 Generate Rotations"):
     else:
         field_positions = list(default_positions.keys())
         all_players = list(players.keys())
-        target_diff = 1  # diferencia máxima aceptable entre minutos
+        target_diff = 1  # diferencia máxima entre minutos jugados
         max_attempts = 1000
 
         for attempt in range(max_attempts):
@@ -89,7 +99,7 @@ if st.button("🎲 Generate Rotations"):
                         continue
                     minutes_played[player] += 1
 
-                # Rotación
+                # Rotación: cambia jugadores que descansan
                 resting = [p for p in all_players if p not in assigned]
                 if resting:
                     to_rest = random.sample(assigned, len(resting))
@@ -97,6 +107,7 @@ if st.button("🎲 Generate Rotations"):
                 else:
                     previous_starters = assigned
 
+            # Salir si se logra equilibrio
             max_minutes = max(minutes_played.values())
             min_minutes = min(minutes_played.values())
             if max_minutes - min_minutes <= target_diff:
@@ -122,11 +133,10 @@ if st.button("🎲 Generate Rotations"):
 
             for pos, player_name in lineup.items():
                 x, y = formation_x[pos], formation_y[pos]
-                color = "white"
                 ax.text(x, y, player_name, ha='center', va='center', fontsize=10,
-                        bbox=dict(facecolor=color, alpha=0.7, boxstyle='round'))
+                        bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
 
-            # Mostrar suplentes debajo
+            # Suplentes debajo
             for idx, sub in enumerate(resting_players):
                 ax.text(1 + idx * 2, -0.5, sub, ha='center', va='center', fontsize=9,
                         bbox=dict(facecolor='gray', alpha=0.7, boxstyle='round'))
@@ -189,7 +199,7 @@ if st.button("🎲 Generate Rotations"):
                     draw_field_pdf(c, 400, y_offset, lineup2, resting2)
             c.showPage()
 
-        # --- PÁGINA FINAL: RESUMEN DE MINUTOS ---
+        # --- PÁGINA FINAL: RESUMEN ---
         c.setFont("Helvetica-Bold", 16)
         c.drawString(250, 550, "Summary of Minutes Played")
         c.setFont("Helvetica", 12)
