@@ -10,44 +10,33 @@ from datetime import datetime
 
 # --- CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="Smart Lineup Rotator", page_icon="⚽", layout="wide")
-st.title("⚽ Smart Football Lineup Generator - Custom Formation & Fair Playtime")
-st.markdown("Generate fair rotations with customizable formation, goalkeeper exemption, and professional PDF output.")
+st.title("⚽ Smart Football Lineup Generator - Fair Playtime Edition")
+st.markdown("Automatically generate fair player rotations with correct minute tracking and professional PDF export.")
 
-# --- SIDEBAR: AJUSTES DEL PARTIDO ---
+# --- SIDEBAR ---
 st.sidebar.header("⚙️ Match Settings")
 quarters = st.sidebar.slider("Number of quarters", 1, 4, 4)
 intervals = quarters * 2
 num_players = st.sidebar.slider("Number of players", 6, 10, 7)
 ignore_gk = st.sidebar.checkbox("❌ Do not count goalkeeper minutes", value=True)
 
-# --- FORMACIÓN PERSONALIZABLE ---
-st.sidebar.subheader("🧩 Custom Diamond Formation")
-formation_x = {}
-formation_y = {}
-default_positions = {
-    "Goalkeeper": (0.5, 3),
-    "Defender": (3, 3),
-    "Midfielder1": (5, 4.5),
-    "Midfielder2": (5, 1.5),
-    "Forward": (8.5, 3),
+# --- FORMACIÓN FIJA EN DIAMANTE ---
+formation_x = {
+    "Goalkeeper": 0.5,
+    "Defender": 3,
+    "Midfielder1": 5,
+    "Midfielder2": 5,
+    "Forward": 8.5,
+}
+formation_y = {
+    "Goalkeeper": 3,
+    "Defender": 3,
+    "Midfielder1": 4.5,
+    "Midfielder2": 1.5,
+    "Forward": 3,
 }
 
-# Sliders seguros con validación de rango
-for pos, (dx, dy) in default_positions.items():
-    try:
-        dx = float(dx) if 0.0 <= dx <= 10.0 else 5.0
-        dy = float(dy) if 0.0 <= dy <= 6.0 else 3.0
-    except Exception:
-        dx, dy = 5.0, 3.0
-
-    formation_x[pos] = st.sidebar.slider(
-        f"{pos} X", 0.0, 10.0, float(dx), 0.1, key=f"{pos}_x_slider"
-    )
-    formation_y[pos] = st.sidebar.slider(
-        f"{pos} Y", 0.0, 6.0, float(dy), 0.1, key=f"{pos}_y_slider"
-    )
-
-# --- LISTA DE JUGADORES ---
+# --- ENTRADA DE JUGADORES ---
 st.markdown("### 👥 Player list and preferred positions")
 positions = ["Goalkeeper", "Defender", "Midfielder", "Forward"]
 players = {}
@@ -58,14 +47,14 @@ for i in range(num_players):
     if name:
         players[name] = fav_positions
 
-# --- GENERAR ROTACIONES EQUILIBRADAS ---
+# --- GENERAR ROTACIONES ---
 if st.button("🎲 Generate Rotations"):
     if len(players) < 6:
         st.error("You must enter at least 6 players.")
     else:
-        field_positions = list(default_positions.keys())
+        field_positions = list(formation_x.keys())
         all_players = list(players.keys())
-        target_diff = 1  # diferencia máxima entre minutos jugados
+        target_diff = 1
         max_attempts = 1000
 
         for attempt in range(max_attempts):
@@ -93,13 +82,12 @@ if st.button("🎲 Generate Rotations"):
 
                 lineups.append(lineup)
 
-                # Actualizar minutos (ignorando portero si se selecciona)
+                # Actualizar minutos jugados
                 for pos, player in lineup.items():
                     if ignore_gk and pos == "Goalkeeper":
                         continue
                     minutes_played[player] += 1
 
-                # Rotación: cambia jugadores que descansan
                 resting = [p for p in all_players if p not in assigned]
                 if resting:
                     to_rest = random.sample(assigned, len(resting))
@@ -107,15 +95,15 @@ if st.button("🎲 Generate Rotations"):
                 else:
                     previous_starters = assigned
 
-            # Salir si se logra equilibrio
+            # Verificar equilibrio
             max_minutes = max(minutes_played.values())
             min_minutes = min(minutes_played.values())
             if max_minutes - min_minutes <= target_diff:
                 break
 
-        st.success("✅ Balanced rotations generated successfully!")
+        st.success("✅ Fair and balanced rotations generated successfully!")
 
-        # --- VISUALIZACIÓN ---
+        # --- VISUALIZAR FORMACIONES ---
         for i, lineup in enumerate(lineups, 1):
             st.subheader(f"🕐 Half-quarter {i}")
             resting_players = [p for p in all_players if p not in lineup.values()]
@@ -132,21 +120,20 @@ if st.button("🎲 Generate Rotations"):
             ax.axis('off')
 
             for pos, player_name in lineup.items():
-                x, y = formation_x[pos], formation_y[pos]
-                ax.text(x, y, player_name, ha='center', va='center', fontsize=10,
+                ax.text(formation_x[pos], formation_y[pos], player_name, ha='center', va='center', fontsize=10,
                         bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'))
 
-            # Suplentes debajo
             for idx, sub in enumerate(resting_players):
                 ax.text(1 + idx * 2, -0.5, sub, ha='center', va='center', fontsize=9,
                         bbox=dict(facecolor='gray', alpha=0.7, boxstyle='round'))
 
             st.pyplot(fig)
 
-        # --- RESUMEN ---
-        st.markdown("### ⏱️ Summary of minutes played")
-        summary = sorted(minutes_played.items(), key=lambda x: x[1], reverse=True)
-        st.table(summary)
+        # --- RESUMEN DE MINUTOS ---
+        st.markdown("### ⏱️ Summary of minutes played (Goalkeeper not counted: {})".format("Yes" if ignore_gk else "No"))
+        total_intervals = intervals
+        summary_data = [(p, m, f"{(m / total_intervals * 100):.1f}%") for p, m in sorted(minutes_played.items(), key=lambda x: x[1], reverse=True)]
+        st.table(summary_data)
 
         # --- GENERAR PDF ---
         pdf_buffer = BytesIO()
@@ -178,7 +165,6 @@ if st.button("🎲 Generate Rotations"):
                 c.setFillColorRGB(0, 0, 0)
                 c.drawCentredString(sub_x, sub_y, sub)
 
-        # --- PDF PAGINADO ---
         intervals_per_page = 4
         for page_start in range(0, len(lineups), intervals_per_page):
             c.setFont("Helvetica-Bold", 14)
@@ -199,22 +185,22 @@ if st.button("🎲 Generate Rotations"):
                     draw_field_pdf(c, 400, y_offset, lineup2, resting2)
             c.showPage()
 
-        # --- PÁGINA FINAL: RESUMEN ---
+        # --- PÁGINA FINAL DE RESUMEN ---
         c.setFont("Helvetica-Bold", 16)
         c.drawString(250, 550, "Summary of Minutes Played")
         c.setFont("Helvetica", 12)
         y = 500
-        for player, mins in summary:
-            c.drawString(300, y, f"{player}: {mins} min")
+        for player, mins, perc in summary_data:
+            c.drawString(280, y, f"{player}: {mins} min ({perc})")
             y -= 20
         c.showPage()
         c.save()
 
         pdf_buffer.seek(0)
-        st.markdown("### 📄 Download Professional PDF with Substitutes and Summary")
+        st.markdown("### 📄 Download Professional PDF")
         st.download_button(
             label="Download PDF",
             data=pdf_buffer,
-            file_name="rotations_custom_balanced.pdf",
+            file_name="lineup_rotations.pdf",
             mime="application/pdf"
         )
