@@ -16,7 +16,7 @@ st.markdown("Genera rotaciones equilibradas asegurando que cada jugador juegue f
 # --- SIDEBAR ---
 st.sidebar.header("⚙️ Match Settings")
 quarters = st.sidebar.slider("Number of Parts", 1, 4, 4)
-divsions = st.sidebar.slider("Number of Parts", 1, 4, 2)
+divisions = st.sidebar.slider("Number of Parts", 1, 4, 2)
 intervals = quarters * divisions  # 6 u 8 intervalos
 num_players = st.sidebar.slider("Number of players", 6, 8, 7)
 ignore_gk = st.sidebar.checkbox("❌ Do not count goalkeeper minutes", value=True)
