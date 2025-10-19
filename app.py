@@ -123,4 +123,88 @@ if st.button("🎲 Generate Rotations"):
             for pos, player_name in lineup.items():
                 x, y = formation_x[pos], formation_y[pos]
                 color = "white"
-                ax.text(x, y, player_name, ha='c_
+                ax.text(x, y, player_name, ha='center', va='center', fontsize=10,
+                        bbox=dict(facecolor=color, alpha=0.7, boxstyle='round'))
+
+            # Mostrar suplentes debajo
+            for idx, sub in enumerate(resting_players):
+                ax.text(1 + idx * 2, -0.5, sub, ha='center', va='center', fontsize=9,
+                        bbox=dict(facecolor='gray', alpha=0.7, boxstyle='round'))
+
+            st.pyplot(fig)
+
+        # --- RESUMEN ---
+        st.markdown("### ⏱️ Summary of minutes played")
+        summary = sorted(minutes_played.items(), key=lambda x: x[1], reverse=True)
+        st.table(summary)
+
+        # --- GENERAR PDF ---
+        pdf_buffer = BytesIO()
+        c = canvas.Canvas(pdf_buffer, pagesize=landscape(letter))
+
+        def draw_field_pdf(c, x_offset, y_offset, lineup, resting_players):
+            c.setFillColorRGB(0.7, 1, 0.7)
+            c.rect(x_offset, y_offset, 300, 180, fill=1)
+            c.setStrokeColorRGB(1, 1, 1)
+            c.setLineWidth(2)
+            c.line(x_offset + 150, y_offset, x_offset + 150, y_offset + 180)
+            c.circle(x_offset + 150, y_offset + 90, 30)
+            c.rect(x_offset, y_offset + 60, 45, 60, stroke=1, fill=0)
+            c.rect(x_offset + 255, y_offset + 60, 45, 60, stroke=1, fill=0)
+
+            for pos, player_name in lineup.items():
+                x = x_offset + (formation_x[pos] / 10) * 300
+                y = y_offset + (formation_y[pos] / 6) * 180
+                c.setFillColorRGB(1, 1, 1)
+                c.rect(x - 15, y - 10, 30, 20, fill=1)
+                c.setFillColorRGB(0, 0, 0)
+                c.drawCentredString(x, y, player_name)
+
+            for idx, sub in enumerate(resting_players):
+                sub_x = x_offset + 40 + idx * 50
+                sub_y = y_offset - 25
+                c.setFillColorRGB(0.6, 0.6, 0.6)
+                c.rect(sub_x - 15, sub_y - 10, 30, 20, fill=1)
+                c.setFillColorRGB(0, 0, 0)
+                c.drawCentredString(sub_x, sub_y, sub)
+
+        # --- PDF PAGINADO ---
+        intervals_per_page = 4
+        for page_start in range(0, len(lineups), intervals_per_page):
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(20, 560, f"Smart Lineup Rotations - {datetime.now().strftime('%Y-%m-%d')}")
+            c.setFont("Helvetica", 10)
+            c.drawString(20, 545, f"Players: {', '.join(all_players)}")
+            c.drawString(20, 530, f"Goalkeeper time excluded: {'Yes' if ignore_gk else 'No'}")
+
+            y_positions = [350, 100]
+            for idx, i in enumerate(range(page_start, min(page_start + intervals_per_page, len(lineups)), 2)):
+                y_offset = y_positions[idx % 2]
+                lineup1 = lineups[i]
+                resting1 = [p for p in all_players if p not in lineup1.values()]
+                draw_field_pdf(c, 50, y_offset, lineup1, resting1)
+                if i + 1 < len(lineups):
+                    lineup2 = lineups[i + 1]
+                    resting2 = [p for p in all_players if p not in lineup2.values()]
+                    draw_field_pdf(c, 400, y_offset, lineup2, resting2)
+            c.showPage()
+
+        # --- PÁGINA FINAL: RESUMEN DE MINUTOS ---
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(250, 550, "Summary of Minutes Played")
+        c.setFont("Helvetica", 12)
+        y = 500
+        for player, mins in summary:
+            c.drawString(300, y, f"{player}: {mins} min")
+            y -= 20
+        c.showPage()
+        c.save()
+
+        pdf_buffer.seek(0)
+        st.markdown("### 📄 Download Professional PDF with Substitutes and Summary")
+        st.download_button(
+            label="Download PDF",
+            data=pdf_buffer,
+            file_name="rotations_custom_balanced.pdf",
+            mime="application/pdf"
+        )
