@@ -11,7 +11,7 @@ from datetime import datetime
 # --- CONFIG INICIAL ---
 st.set_page_config(page_title="Smart Lineup Rotator", page_icon="⚽", layout="wide")
 st.title("⚽ Smart Football Lineup Generator - Fair Playtime Edition")
-st.markdown("Genera rotaciones equilibradas asegurando que cada jugador juegue fuera del arco el mismo tiempo, con PDF profesional.")
+st.markdown("Generate balanced rotations ensuring that each player plays outside the goal at the same time, with professional PDF.")
 
 # --- SIDEBAR ---
 st.sidebar.header("⚙️ Match Settings")
