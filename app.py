@@ -16,7 +16,7 @@ st.markdown("Genera rotaciones equilibradas asegurando que cada jugador juegue f
 # --- SIDEBAR ---
 st.sidebar.header("⚙️ Match Settings")
 quarters = st.sidebar.slider("Number of Parts", 1, 4, 4)
-divisions = st.sidebar.slider("Number of Parts", 1, 4, 2)
+divisions = st.sidebar.slider("Number of Intervals per Part", 1, 4, 2)
 intervals = quarters * divisions  # 6 u 8 intervalos
 num_players = st.sidebar.slider("Number of players", 6, 8, 7)
 ignore_gk = st.sidebar.checkbox("❌ Do not count goalkeeper minutes", value=True)
@@ -119,7 +119,7 @@ if st.button("🎲 Generate Rotations"):
 
         # --- VISUALIZACIÓN ---
         for i, lineup in enumerate(lineups, 1):
-            st.subheader(f"🕐 Half-quarter {i}")
+            st.subheader(f"🕐 Interval {i}")
             resting_players = [p for p in all_players if p not in lineup.values()]
             st.write("Resting players:", ", ".join(resting_players) if resting_players else "None")
 
