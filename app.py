@@ -15,9 +15,9 @@ st.markdown("Genera rotaciones equilibradas asegurando que cada jugador juegue f
 
 # --- SIDEBAR ---
 st.sidebar.header("⚙️ Match Settings")
-quarters = st.sidebar.slider("Number of quarters", 1, 4, 4)
+quarters = st.sidebar.slider("Number of Parts", 1, 4, 4)
 intervals = quarters * 2  # 6 u 8 intervalos
-num_players = st.sidebar.slider("Number of players", 6, 10, 7)
+num_players = st.sidebar.slider("Number of players", 6, 8, 7)
 ignore_gk = st.sidebar.checkbox("❌ Do not count goalkeeper minutes", value=True)
 
 # --- FORMACIÓN FIJA EN DIAMANTE ---
@@ -26,7 +26,7 @@ formation_x = {
     "Defender": 3,
     "Midfielder1": 5,
     "Midfielder2": 5,
-    "Forward": 8.5,
+    "Forward": 7.5,
 }
 formation_y = {
     "Goalkeeper": 3,
